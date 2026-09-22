@@ -641,6 +641,24 @@ html[data-theme="productivity"] .modal-card{background:#fff;color:#102c53}
 }
 </style>
 
+
+<style id="repeat-event-patch-style">
+.agenda-actions{display:flex;gap:5px;align-items:center}
+.agenda-actions .agenda-delete{
+  border:1px solid rgba(255,113,133,.25)!important;
+  background:rgba(255,113,133,.07)!important;
+  color:#ff8798!important;
+}
+.event-delete-btn{
+  border:1px solid rgba(255,113,133,.28);
+  background:rgba(255,113,133,.07);
+  color:#ff8798;
+  border-radius:9px;
+  padding:10px 12px;
+  cursor:pointer;
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -899,7 +917,7 @@ html[data-theme="productivity"] .modal-card{background:#fff;color:#102c53}
     <article class="setting-card"><h3>데이터 백업</h3><p>일정, 지출, 고정비, 프로젝트, 메모, 할 일을 JSON 한 파일로 저장합니다.</p><div class="setting-actions"><button class="primary" data-action="backup">백업 다운로드</button><label class="secondary">백업 복구<input id="restoreInput2" type="file" accept=".json" hidden></label></div></article>
     <article class="setting-card"><h3>실시간 동기화</h3><p>같은 Google 계정으로 로그인하면 PC와 모바일에서 Firestore 실시간 동기화됩니다.</p></article>
     <article class="setting-card"><h3>데이터 초기화</h3><p>현재 계정 데이터를 초기 상태로 되돌립니다.</p><div class="setting-actions"><button class="secondary" data-action="reset">전체 초기화</button></div></article>
-    <article class="setting-card"><h3>버전</h3><p>CONTROL V4 — 메뉴/UX 전면 개편판</p></article>
+    <article class="setting-card"><h3>버전</h3><p>CONTROL V4.2 — 반복 일정 + 일정 삭제</p></article>
   </div>
 </section>
 </main>
@@ -944,6 +962,7 @@ function normalize(raw){
   if(Number(d.budget||0)>0 && !d.monthlyBudgets[monthKey(now())]) d.monthlyBudgets[monthKey(now())]=Number(d.budget);
   d.projects=d.projects.map(p=>({...p,logs:Array.isArray(p.logs)?p.logs:[]}));
   d.records=d.records.map(r=>({...r,tags:Array.isArray(r.tags)?r.tags:(r.tags?String(r.tags).split(',').map(x=>x.trim()).filter(Boolean):(r.type&&r.type!=='메모'?[r.type]:[]))}));
+  d.events=d.events.map(e=>({...e,repeat:e.repeat||'none',repeatUntil:e.repeatUntil||''}));
   d.version=4; return d;
 }
 function load(){
@@ -988,9 +1007,45 @@ function renderTop(){
 }
 function renderClock(){$('#clock').textContent=now().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}
 
+function dateParts(ds){const [y,m,d]=String(ds||'').split('-').map(Number);return {y,m,d}}
+function daysBetween(a,b){
+  const A=dateParts(a),B=dateParts(b);
+  return Math.round((Date.UTC(B.y,B.m-1,B.d)-Date.UTC(A.y,A.m-1,A.d))/86400000);
+}
+function eventOccursOn(ev,ds){
+  if(!ev?.date||!ds||ds<ev.date)return false;
+  if(ev.repeatUntil&&ds>ev.repeatUntil)return false;
+  const repeat=ev.repeat||'none';
+  if(repeat==='none')return ds===ev.date;
+  if(repeat==='daily')return true;
+  if(repeat==='weekly')return daysBetween(ev.date,ds)%7===0;
+  const S=dateParts(ev.date),T=dateParts(ds);
+  if(repeat==='monthly'){
+    const diff=(T.y-S.y)*12+(T.m-S.m);
+    if(diff<0)return false;
+    const last=new Date(T.y,T.m,0).getDate();
+    return T.d===Math.min(S.d,last);
+  }
+  if(repeat==='yearly'){
+    if(T.y<S.y||T.m!==S.m)return false;
+    const last=new Date(T.y,T.m,0).getDate();
+    return T.d===Math.min(S.d,last);
+  }
+  return ds===ev.date;
+}
+function eventsForDate(ds){return data.events.filter(ev=>eventOccursOn(ev,ds))}
+function repeatLabel(ev){
+  return ({daily:'매일',weekly:'매주',monthly:'매월',yearly:'매년'})[ev?.repeat||'none']||'';
+}
+function deleteEventSeries(id){
+  const ev=data.events.find(x=>x.id===id); if(!ev)return;
+  const msg=(ev.repeat&&ev.repeat!=='none')?'이 반복 일정 전체를 삭제할까요?':'이 일정을 삭제할까요?';
+  if(confirm(msg)){data.events=data.events.filter(x=>x.id!==id);save();closeModal();renderAll();toast('일정을 삭제했습니다.')}
+}
+
 function itemsForDate(ds){
   const arr=[];
-  data.events.filter(x=>x.date===ds).forEach(x=>arr.push({id:x.id,kind:'event',title:x.title,sub:`${x.time||'시간 미정'} · ${x.type||'일정'}`}));
+  eventsForDate(ds).forEach(x=>arr.push({id:x.id,kind:'event',title:x.title,sub:`${x.time||'시간 미정'} · ${x.type||'일정'}${repeatLabel(x)?' · ↻ '+repeatLabel(x):''}`}));
   data.tasks.filter(x=>x.date===ds).forEach(x=>arr.push({id:x.id,kind:'task',title:x.title,sub:x.done?'완료':'할 일'}));
   data.records.filter(x=>x.date===ds).forEach(x=>arr.push({id:x.id,kind:'memo',title:x.title,sub:'메모'}));
   data.expenses.filter(x=>x.date===ds).forEach(x=>arr.push({id:x.id,kind:'expense',title:`${x.category} ${won(x.amount)}`,sub:x.kind==='fixed'?'고정비':'변동비'}));
@@ -1008,8 +1063,9 @@ function buildCalendar(target,base){
 function renderSelectedAgenda(){
   const d=new Date(selectedDate+'T00:00:00');$('#selectedDateTitle').textContent=d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'});
   const arr=itemsForDate(selectedDate);
-  $('#selectedAgenda').innerHTML=arr.length?arr.map(x=>`<div class="agenda-item ${x.kind}"><div class="agenda-main"><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></div><div class="agenda-actions">${x.kind==='task'?`<button data-toggle-task="${x.id}">✓</button>`:''}<button data-edit-kind="${x.kind}" data-edit-id="${x.id}">수정</button></div></div>`).join(''):empty('이 날짜의 기록이 없습니다.');
+  $('#selectedAgenda').innerHTML=arr.length?arr.map(x=>`<div class="agenda-item ${x.kind}"><div class="agenda-main"><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></div><div class="agenda-actions">${x.kind==='task'?`<button data-toggle-task="${x.id}">✓</button>`:''}<button data-edit-kind="${x.kind}" data-edit-id="${x.id}">수정</button>${x.kind==='event'?`<button class="agenda-delete" data-del-event="${x.id}">삭제</button>`:''}</div></div>`).join(''):empty('이 날짜의 기록이 없습니다.');
   $$('[data-edit-kind]').forEach(b=>b.onclick=()=>editByKind(b.dataset.editKind,b.dataset.editId));
+  $$('[data-del-event]').forEach(b=>b.onclick=()=>deleteEventSeries(b.dataset.delEvent));
   $$('[data-toggle-task]').forEach(b=>b.onclick=()=>{const t=data.tasks.find(x=>x.id===b.dataset.toggleTask);if(t){t.done=!t.done;save();renderAll()}});
 }
 function renderCalendars(){
@@ -1024,7 +1080,7 @@ function catBarsHTML(cats,limit=99){
   return ent.length?ent.map(([k,v])=>`<div class="cat-row"><div class="top"><b>${esc(k)}</b><span>${won(v)}</span></div><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join(''):empty('지출 데이터가 없습니다.');
 }
 function renderHome(){
-  const today=dateKey(now()),mk=monthKey(now()),events=data.events.filter(x=>x.date===today),tasks=data.tasks.filter(x=>!x.done),exp=data.expenses.filter(x=>x.date.startsWith(mk)),spent=exp.reduce((a,x)=>a+Number(x.amount||0),0),budget=getBudget(mk),remain=budget-spent;
+  const today=dateKey(now()),mk=monthKey(now()),events=eventsForDate(today),tasks=data.tasks.filter(x=>!x.done),exp=data.expenses.filter(x=>x.date.startsWith(mk)),spent=exp.reduce((a,x)=>a+Number(x.amount||0),0),budget=getBudget(mk),remain=budget-spent;
   $('#homeEventCount').textContent=events.length;$('#homeTaskCount').textContent=tasks.length;$('#homeSpend').textContent=won(spent);$('#homeRemain').textContent=budget?won(remain):'-';$('#homeTotalSpend').textContent=won(spent);$('#homeBudget').textContent=budget?won(budget):'미설정';$('#homeBudgetRemain').textContent=budget?won(remain):'-';
   const pct=budget?Math.min(100,Math.round(spent/budget*100)):0;$('#budgetPct').textContent=pct+'%';$('#budgetRing').style.setProperty('--pct',pct+'%');
   $('#homeTopCats').innerHTML=catBarsHTML(categoryTotals(exp),2);
@@ -1088,7 +1144,17 @@ function closeModal(){$('#modal').classList.add('hidden')}
 const opt=(arr,val)=>arr.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('');
 
 function eventModal(x=null){
-  modal(x?'일정 수정':'일정 추가',`<div class="form-row"><label>날짜<input name="date" type="date" value="${x?.date||selectedDate}" required></label><label>시간<input name="time" type="time" value="${x?.time||''}"></label></div><label>제목<input name="title" value="${esc(x?.title||'')}" required></label><label>분류<select name="type">${opt(['개인','회사','약속','기타'],x?.type||'개인')}</select></label><label>메모<textarea name="memo">${esc(x?.memo||'')}</textarea></label>`,f=>{if(x)Object.assign(x,f);else data.events.push({id:uid(),...f,created:new Date().toISOString()})});
+  modal(x?'일정 수정':'일정 추가',`<div class="form-row"><label>날짜<input name="date" type="date" value="${x?.date||selectedDate}" required></label><label>시간<input name="time" type="time" value="${x?.time||''}"></label></div><label>제목<input name="title" value="${esc(x?.title||'')}" required></label><div class="form-row"><label>분류<select name="type">${opt(['개인','회사','약속','기타'],x?.type||'개인')}</select></label><label>반복<select name="repeat"><option value="none" ${(x?.repeat||'none')==='none'?'selected':''}>반복 없음</option><option value="daily" ${x?.repeat==='daily'?'selected':''}>매일</option><option value="weekly" ${x?.repeat==='weekly'?'selected':''}>매주</option><option value="monthly" ${x?.repeat==='monthly'?'selected':''}>매월</option><option value="yearly" ${x?.repeat==='yearly'?'selected':''}>매년</option></select></label></div><label>반복 종료일 <small style="opacity:.65">비워두면 계속 반복</small><input name="repeatUntil" type="date" value="${x?.repeatUntil||''}"></label><label>메모<textarea name="memo">${esc(x?.memo||'')}</textarea></label>`,f=>{
+    f.repeat=f.repeat||'none';
+    if(f.repeat==='none')f.repeatUntil='';
+    if(f.repeatUntil&&f.repeatUntil<f.date)f.repeatUntil=f.date;
+    if(x)Object.assign(x,f);else data.events.push({id:uid(),...f,created:new Date().toISOString()})
+  });
+  if(x){
+    const submit=$('#modalForm button[type="submit"]');
+    if(submit)submit.insertAdjacentHTML('beforebegin',`<button class="event-delete-btn" type="button" id="deleteEventBtn">일정 삭제</button>`);
+    const del=$('#deleteEventBtn');if(del)del.onclick=()=>deleteEventSeries(x.id);
+  }
 }
 function taskModal(x=null){
   modal(x?'할 일 수정':'할 일 추가',`<label>할 일<input name="title" value="${esc(x?.title||'')}" required></label><label>날짜<input name="date" type="date" value="${x?.date||selectedDate}"></label>`,f=>{if(x)Object.assign(x,f);else data.tasks.push({id:uid(),...f,done:false,created:new Date().toISOString()})});
@@ -1120,7 +1186,7 @@ function applyFixed(){
   if(added){save();renderAll();toast(`${added}개 고정비를 반영했습니다.`)}else toast('새로 반영할 고정비가 없습니다.');
 }
 function quickModal(){
-  modal('빠른 추가',`<label>종류<select name="quickType"><option value="memo">메모</option><option value="task">할 일</option><option value="event">일정</option><option value="expense">지출</option></select></label><label>내용<input name="text" required placeholder="예: 세차하기 / 점심 9000원"></label>`,f=>{const ds=dateKey(now());if(f.quickType==='task')data.tasks.push({id:uid(),title:f.text,date:ds,done:false,created:new Date().toISOString()});else if(f.quickType==='event')data.events.push({id:uid(),title:f.text,date:ds,time:'',type:'개인',created:new Date().toISOString()});else if(f.quickType==='expense'){const m=f.text.match(/([0-9][0-9,]*)/);const amount=m?Number(m[1].replace(/,/g,'')):0;data.expenses.push({id:uid(),date:ds,kind:'variable',category:'기타',amount,memo:f.text,created:new Date().toISOString()})}else data.records.push({id:uid(),title:f.text,date:ds,content:'',tags:[],created:new Date().toISOString()})});
+  modal('빠른 추가',`<label>종류<select name="quickType"><option value="memo">메모</option><option value="task">할 일</option><option value="event">일정</option><option value="expense">지출</option></select></label><label>내용<input name="text" required placeholder="예: 세차하기 / 점심 9000원"></label>`,f=>{const ds=dateKey(now());if(f.quickType==='task')data.tasks.push({id:uid(),title:f.text,date:ds,done:false,created:new Date().toISOString()});else if(f.quickType==='event')data.events.push({id:uid(),title:f.text,date:ds,time:'',type:'개인',repeat:'none',repeatUntil:'',created:new Date().toISOString()});else if(f.quickType==='expense'){const m=f.text.match(/([0-9][0-9,]*)/);const amount=m?Number(m[1].replace(/,/g,'')):0;data.expenses.push({id:uid(),date:ds,kind:'variable',category:'기타',amount,memo:f.text,created:new Date().toISOString()})}else data.records.push({id:uid(),title:f.text,date:ds,content:'',tags:[],created:new Date().toISOString()})});
 }
 function editByKind(kind,id){
   if(kind==='event')eventModal(data.events.find(x=>x.id===id));
@@ -1143,7 +1209,7 @@ function searchAll(term){
 }
 function aiReply(q){
   const s=q.toLowerCase(),today=dateKey(now()),mk=monthKey(now());
-  if(/오늘.*일정|일정/.test(s)){const a=data.events.filter(x=>x.date===today).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));return a.length?a.map(x=>`${x.time||'--:--'}  ${x.title}`).join('\n'):'오늘 일정이 없습니다.'}
+  if(/오늘.*일정|일정/.test(s)){const a=eventsForDate(today).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));return a.length?a.map(x=>`${x.time||'--:--'}  ${x.title}${repeatLabel(x)?' · ↻ '+repeatLabel(x):''}`).join('\n'):'오늘 일정이 없습니다.'}
   if(/할 ?일/.test(s)){const a=data.tasks.filter(x=>!x.done);return a.length?a.map(x=>`□ ${x.title}${x.date?' · '+x.date:''}`).join('\n'):'남은 할 일이 없습니다.'}
   if(/지출|돈|얼마/.test(s)){const a=data.expenses.filter(x=>x.date.startsWith(mk)),sum=a.reduce((n,x)=>n+Number(x.amount||0),0),budget=getBudget(mk);return `이번 달 지출 ${won(sum)}\n${budget?`예산 ${won(budget)} / 잔여 ${won(budget-sum)}`:'예산 미설정'}`}
   if(/프로젝트/.test(s))return data.projects.length?data.projects.map(x=>`• ${x.name} — ${x.status}`).join('\n'):'프로젝트가 없습니다.';
