@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111f">
+<title>CONTROL · Personal Center</title>
+<style>
+:root{
+  --bg:#06101c; --bg2:#081522; --side:#06111d; --card:#0c1a29; --card2:#102235;
+  --line:#1a334a; --line2:#24455f; --text:#edf6ff; --muted:#7890a7; --muted2:#9fb1c3;
+  --blue:#168dff; --blue2:#0d6fd0; --cyan:#52d5cf; --green:#27c989; --amber:#ffb84d;
+  --red:#ff6e83; --violet:#9b7cff; --shadow:0 18px 50px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.app{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+.sidebar{
+  position:sticky;top:0;height:100vh;overflow:auto;z-index:30;
+  background:linear-gradient(180deg,#071522 0%,#06101a 100%);
+  border-right:1px solid var(--line);padding:20px 14px 24px;
+}
+.brand{display:flex;align-items:center;gap:12px;padding:2px 10px 22px}
+.brand-logo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#1c9cff,#0d58bb);box-shadow:0 9px 24px rgba(22,141,255,.25);font-size:22px}
+.brand strong{display:block;font-size:19px;letter-spacing:.9px}
+.brand small{display:block;color:#9cb0c5;font-size:8px;letter-spacing:2px;margin-top:2px}
+.side-close{display:none}
+.nav-section{display:grid;gap:5px}
+.nav-main,.nav-sub{
+  width:100%;border:0;background:transparent;color:#b9c9d8;text-align:left;border-radius:9px;
+}
+.nav-main{padding:11px 12px;font-weight:750;font-size:14px;display:flex;gap:10px;align-items:center}
+.nav-main.active{background:linear-gradient(90deg,#0d4f89,#102a43);box-shadow:inset 3px 0 var(--blue);color:#fff}
+.nav-main:hover,.nav-sub:hover{background:#0e2031;color:#fff}
+.nav-sub{padding:6px 9px 6px 43px;font-size:11px;color:#7089a1}
+.nav-spacer{height:7px}
+.side-foot{margin-top:26px;padding-top:16px;border-top:1px solid #12283b;display:grid;gap:4px}
+.side-foot button,.side-foot label{
+  border:0;background:transparent;color:#8ca2b8;padding:7px 11px;text-align:left;border-radius:8px;font-size:11px;cursor:pointer
+}
+.side-foot button:hover,.side-foot label:hover{background:#0e2031;color:#fff}
+.version{color:#506a82;font-size:9px;padding:12px 11px 0}
+.backdrop{display:none}
+
+.workspace{min-width:0}
+.topbar{
+  height:66px;position:sticky;top:0;z-index:20;background:rgba(7,18,31,.96);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 20px;
+}
+.menu-btn{border:0;background:transparent;color:#dbe8f4;font-size:24px;padding:7px 9px}
+.search-wrap{position:relative;flex:1;max-width:600px}
+.search-box{height:40px;border-radius:22px;background:#0f1f31;border:1px solid #20394f;display:flex;align-items:center;gap:8px;padding:0 14px;color:#718aa2}
+.search-box input{width:100%;border:0;outline:0;background:transparent;color:#fff;font-size:12px}
+.search-results{
+  position:absolute;top:46px;left:0;right:0;background:#0c1928;border:1px solid var(--line2);border-radius:12px;
+  box-shadow:var(--shadow);padding:8px;max-height:350px;overflow:auto
+}
+.search-hit{display:block;width:100%;text-align:left;border:0;background:transparent;color:#dfeaf5;padding:10px;border-radius:8px}
+.search-hit:hover{background:#11253a}
+.search-hit small{display:block;color:#6f879d;margin-top:2px}
+.top-date{margin-left:auto;color:#9eb0c0;font-size:11px;text-align:right}
+.top-date b{color:#fff;display:block;font-size:12px}
+.primary{border:0;border-radius:9px;background:linear-gradient(135deg,var(--blue),#0877eb);color:#fff;padding:10px 14px;font-weight:700}
+.secondary{border:1px solid var(--line2);border-radius:9px;background:#0f1e2f;color:#dbe7f2;padding:9px 12px}
+.ghost{border:0;background:transparent;color:#6fb7ff;padding:6px 7px}
+.icon-btn{border:1px solid var(--line);background:#0d1b2b;color:#cfe0f0;border-radius:8px;padding:7px 10px}
+
+main{padding:0 22px 52px;max-width:1600px;margin:0 auto}
+.page{display:none}
+.page.active{display:block}
+.hero{
+  margin:0 -22px 18px;height:170px;padding:27px 42px;display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--line);overflow:hidden;position:relative;
+  background:
+    radial-gradient(circle at 67% 24%,rgba(80,133,173,.4) 0 4%,transparent 28%),
+    linear-gradient(180deg,#122d43 0,#0b1d2e 52%,#071421 100%);
+}
+.hero:before,.hero:after{content:"";position:absolute;left:-5%;right:-5%;bottom:-1px;height:90px;opacity:.82}
+.hero:before{background:linear-gradient(154deg,transparent 0 35%,#0b1d2d 35.5% 42%,transparent 42.5% 48%,#0a1a28 48.5% 59%,transparent 59.5%)}
+.hero:after{background:linear-gradient(26deg,transparent 0 38%,#0a1c2b 38.5% 49%,transparent 49.5% 61%,#0d2234 61.5% 72%,transparent 72.5%)}
+.hero-copy,.quote-card{position:relative;z-index:1}
+.hero-tag{color:#60b8ff;font-size:9px;letter-spacing:2px;font-weight:700}
+.hero h1{margin:8px 0 5px;font-size:30px;letter-spacing:-1px}
+.hero p{margin:0;color:#9fb0c0;font-size:12px}
+.quote-card{width:300px;background:rgba(6,18,30,.82);border:1px solid #31506a;border-radius:12px;padding:14px 16px}
+.quote-card strong{font-size:12px}
+.quote-card p{margin:9px 0 0;color:#b0c0cf;font-size:11px;line-height:1.55}
+
+.welcome{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.welcome h2{margin:0;font-size:21px}
+.welcome p{margin:4px 0 0;color:var(--muted);font-size:11px}
+.quick-actions{display:flex;gap:8px;flex-wrap:wrap}
+.quick-actions button{border:1px solid #23445e;background:#102237;color:#dfeaf5;border-radius:9px;padding:9px 12px}
+.quick-actions button:hover{border-color:#2d77ad}
+
+.dashboard{display:grid;grid-template-columns:1.02fr 1.18fr .9fr;gap:12px}
+.card{background:linear-gradient(145deg,#0d1b2a,#0a1725);border:1px solid var(--line);border-radius:13px;padding:15px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.card-head h3,.card-head h2{margin:0;font-size:13px}
+.card-head .actions{display:flex;gap:4px}
+.today-card{display:flex;justify-content:space-between;align-items:center;min-height:100px}
+.today-card small{color:#50aaff;font-size:9px;letter-spacing:1.5px}
+.today-card h2{margin:6px 0 4px;font-size:19px}
+.today-card p{margin:0;color:#8fa5ba;font-size:12px}
+.today-badge{color:#48a7ff;font-size:11px;font-weight:750}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
+.stat{min-height:86px;background:#0e1c2c;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px}
+.stat .ico{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#12365e;color:#43a8ff;font-weight:800}
+.stat:nth-child(2) .ico{background:#153d3a;color:#52d5cf}
+.stat:nth-child(3) .ico{background:#402631;color:#ff7185}
+.stat:nth-child(4) .ico{background:#3f321a;color:#ffc35d}
+.stat span{font-size:10px;color:#7f96ad}
+.stat strong{display:block;color:#fff;font-size:18px;margin-top:3px}
+
+.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.cal-head{padding:5px 2px;text-align:center;color:#6d8297;font-size:9px}
+.cal-head.sun{color:#e46a75}.cal-head.sat{color:#56a8ef}
+.day{
+  min-height:46px;padding:5px;border:1px solid transparent;border-radius:8px;background:transparent;color:#d8e4ef;text-align:left;position:relative
+}
+.day:hover{background:#10283d}.day.selected{background:#0f4d84;border-color:#1e8bdf}
+.day.today .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff}
+.day.out{opacity:.28}
+.day .num{font-size:9px}
+.day .dots{display:flex;gap:2px;position:absolute;left:5px;bottom:4px}
+.day .dot{width:4px;height:4px;border-radius:50%}
+.dot.event{background:#46a7ff}.dot.task{background:#51d1a5}.dot.record{background:#ffad5d}.dot.expense{background:#ff7185}
+.home-calendar .day{min-height:44px}
+.list{display:grid;gap:7px}
+.list-item{display:flex;align-items:center;gap:9px;background:#0e1d2e;border:1px solid #172f45;border-radius:9px;padding:9px 10px}
+.list-item .marker{width:8px;height:8px;border-radius:50%;background:#25ca85;flex:none}
+.list-item .main{min-width:0;flex:1}
+.list-item b{display:block;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-item small{display:block;color:#70879d;font-size:9px;margin-top:2px}
+.empty{min-height:135px;display:grid;place-items:center;text-align:center;color:#647b91;font-size:11px;border:1px dashed #1b3348;border-radius:10px}
+.tall{min-height:255px}
+.tall .empty{min-height:240px}
+
+.lower{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px}
+.money-overview{display:flex;align-items:center;gap:24px;padding:8px 5px}
+.ring{--pct:0%;width:112px;height:112px;border-radius:50%;background:conic-gradient(var(--blue) var(--pct),#1a2e40 0);display:grid;place-items:center;position:relative;flex:none}
+.ring:after{content:"";position:absolute;width:78px;height:78px;border-radius:50%;background:#0b1826}
+.ring strong{position:relative;z-index:1;font-size:19px}
+.money-meta{display:grid;gap:8px;font-size:10px;color:#8198ae}
+.money-meta b{display:block;color:#fff;font-size:13px;margin-top:2px}
+.wide-btn{width:100%;border:1px solid #27517a;background:#0e2942;color:#6db8ff;border-radius:8px;padding:8px;margin-top:8px}
+.tools{margin-top:12px}
+.tool-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.tool{
+  min-height:78px;border:1px solid #1d3a53;background:#0e1e30;border-radius:9px;color:#58adff;display:grid;place-items:center;padding:9px
+}
+.tool span{display:block;color:#dae6f0;font-size:10px;margin-top:4px}
+.home-footer{padding:24px 3px 0;color:#627991;font-size:10px}
+.home-footer em{float:right}
+
+.section-head{display:flex;justify-content:space-between;align-items:center;padding:24px 0 16px}
+.section-head h1{margin:0;font-size:22px;letter-spacing:.4px}
+.section-head p{margin:4px 0 0;color:#728aa0;font-size:11px}
+.calendar-page{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px}
+.calendar-large .day{min-height:100px;border-color:#12293d}
+.calendar-large .day .num{font-size:11px}
+.day-labels{display:grid;gap:7px;margin-top:8px}
+.agenda-item{border-left:3px solid var(--blue);background:#0e1d2d;border-radius:8px;padding:10px}
+.agenda-item.task{border-color:var(--green)}.agenda-item.record{border-color:var(--amber)}.agenda-item.expense{border-color:var(--red)}
+.agenda-item b{font-size:11px}.agenda-item small{display:block;color:#748ba0;font-size:9px;margin-top:2px}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.stat-card{background:#0d1b2a;border:1px solid var(--line);border-radius:11px;padding:15px}
+.stat-card span{display:block;color:#7890a6;font-size:10px}
+.stat-card strong{display:inline-block;margin-top:7px;font-size:20px}
+.stat-card button{float:right;border:0;background:transparent;color:#52adff}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filters input,.filters select{
+  background:#091522;border:1px solid #203b53;color:#e7f1fa;border-radius:8px;padding:9px 10px;min-height:38px
+}
+.filters input{flex:1;min-width:180px}
+.table{display:grid}
+.row{display:grid;grid-template-columns:110px 80px 110px minmax(0,1fr) 120px 38px;gap:8px;align-items:center;padding:11px 7px;border-top:1px solid #173049;font-size:11px}
+.row:first-child{border-top:0}
+.amount{text-align:right;font-weight:750}
+.pill{display:inline-flex;align-items:center;justify-content:center;border:1px solid #2a4b65;border-radius:999px;padding:3px 7px;color:#90a7bc;font-size:9px;white-space:nowrap}
+.delete{border:0;background:transparent;color:#ff7185;padding:6px}
+.category-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.cat-row{background:#0e1d2d;border:1px solid #173149;border-radius:8px;padding:10px}
+.cat-row .top{display:flex;justify-content:space-between;font-size:10px}
+.bar{height:5px;border-radius:99px;background:#172d40;margin-top:7px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#168dff,#52d5cf)}
+
+.project-grid,.record-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.project-card,.record-card{background:#0d1b2a;border:1px solid var(--line);border-radius:12px;padding:15px}
+.project-card h3,.record-card h3{font-size:14px;margin:9px 0 5px}
+.project-card p,.record-card p{color:#8ba0b4;font-size:11px;line-height:1.55;white-space:pre-wrap}
+.card-foot{display:flex;justify-content:space-between;align-items:center;color:#667f96;font-size:9px;margin-top:12px}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.status-진행중{background:#28cc88}.status-관찰중{background:#4ea9ff}.status-아이디어{background:#a285ff}.status-보류{background:#ffb74a}.status-완료{background:#6f8195}
+
+.ai-shell{max-width:820px;margin:45px auto 0;text-align:center}
+.ai-orb{width:70px;height:70px;margin:auto;border-radius:50%;display:grid;place-items:center;border:1px solid #288ee5;box-shadow:0 0 42px rgba(24,141,255,.25);font-size:28px}
+.ai-shell h1{margin:15px 0 5px}.ai-shell>p{color:#7990a6;font-size:11px}
+.ai-messages{height:360px;overflow:auto;background:#0b1826;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;text-align:left}
+.msg{max-width:82%;padding:10px 12px;border-radius:10px;font-size:11px;white-space:pre-wrap;line-height:1.5}
+.msg.bot{background:#11263a}.msg.user{align-self:flex-end;background:#1259a3}
+.ai-form{display:flex;gap:8px;margin-top:10px}
+.ai-form input{flex:1;background:#091522;border:1px solid #203b53;color:#fff;border-radius:9px;padding:11px}
+
+.settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.setting-card{background:#0d1b2a;border:1px solid var(--line);border-radius:12px;padding:16px}
+.setting-card h3{margin:0 0 5px;font-size:14px}.setting-card p{color:#7f95aa;font-size:11px}
+.setting-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+.modal{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);display:grid;place-items:center;padding:18px}
+.modal-card{width:min(560px,100%);max-height:90vh;overflow:auto;background:#0b1928;border:1px solid #294960;border-radius:14px;padding:17px;box-shadow:var(--shadow)}
+.modal-head{display:flex;justify-content:space-between;align-items:center}.modal-head h3{margin:0;font-size:16px}
+.modal-head button{border:0;background:transparent;color:#fff;font-size:24px}
+.modal form{display:grid;gap:10px;margin-top:14px}
+.modal label{display:grid;gap:5px;color:#849bb0;font-size:10px}
+.modal input,.modal select,.modal textarea{width:100%;background:#071420;border:1px solid #203c54;color:#fff;border-radius:8px;padding:10px}
+.modal textarea{min-height:95px;resize:vertical}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.toast{position:fixed;right:18px;bottom:18px;z-index:100;background:#10263a;border:1px solid #2d5470;color:#e9f3fb;border-radius:9px;padding:11px 14px;font-size:11px;box-shadow:var(--shadow);opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s}
+.toast.show{opacity:1;transform:translateY(0)}
+
+.mobile-nav{display:none}
+
+@media(max-width:1080px){
+  .dashboard{grid-template-columns:1fr 1fr}.dashboard>.schedule-card{grid-column:1/3}
+  .lower{grid-template-columns:1fr 1fr}.lower>.recent-card{grid-column:1/3}
+  .project-grid,.record-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:900px){
+  .app{display:block}
+  .sidebar{position:fixed;left:-86vw;top:0;width:82vw;max-width:330px;height:100dvh;transition:left .22s ease;box-shadow:18px 0 55px rgba(0,0,0,.45)}
+  .sidebar.open{left:0}
+  .side-close{display:flex;width:100%;align-items:center;gap:8px;border:1px solid #203d55;background:#0d1d2d;color:#dce9f5;border-radius:9px;padding:10px 12px;margin-bottom:10px}
+  .backdrop{display:block;position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;transition:.2s}
+  .backdrop.show{opacity:1;pointer-events:auto}
+  body.drawer-open{overflow:hidden}
+  .topbar{height:64px;padding:0 10px}
+  .search-wrap{display:none}.top-date{display:none}
+  .topbar>.primary{font-size:10px;padding:9px 11px}
+  main{padding:0 10px 92px}
+  .page{padding:0}
+  .hero{height:135px;margin:0 -10px 14px;padding:18px}
+  .hero h1{font-size:22px}.hero p{font-size:10px}.quote-card{display:none}
+  .welcome{align-items:flex-start;gap:10px;flex-direction:column}
+  .quick-actions{width:100%;display:grid;grid-template-columns:1fr 1fr 1fr}
+  .quick-actions button{padding:9px 6px;font-size:10px}
+  .dashboard{grid-template-columns:1fr}.dashboard>.schedule-card{grid-column:auto}
+  .lower{grid-template-columns:1fr}.lower>.recent-card{grid-column:auto}
+  .home-calendar .day{min-height:48px}
+  .tall{min-height:150px}.tall .empty{min-height:140px}
+  .tool-grid{grid-template-columns:repeat(3,1fr)}
+  .section-head{padding:18px 0 12px}
+  .section-head h1{font-size:19px}
+  .calendar-page{grid-template-columns:1fr}
+  .calendar-large .day{min-height:68px;padding:4px}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .row{grid-template-columns:72px 54px 72px minmax(0,1fr) 76px 28px;font-size:9px;padding:9px 2px}
+  .project-grid,.record-grid,.settings-grid{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .mobile-nav{
+    display:grid;position:fixed;left:8px;right:8px;bottom:8px;z-index:25;grid-template-columns:repeat(5,1fr);
+    background:rgba(8,20,33,.96);backdrop-filter:blur(14px);border:1px solid #20405a;border-radius:14px;padding:5px;box-shadow:0 12px 30px rgba(0,0,0,.35)
+  }
+  .mobile-nav button{border:0;background:transparent;color:#738aa0;padding:8px 4px;border-radius:9px;font-size:9px}
+  .mobile-nav button b{display:block;font-size:17px;line-height:17px;margin-bottom:3px}
+  .mobile-nav button.active{background:#0f3760;color:#fff}
+  .toast{bottom:82px;left:14px;right:14px}
+}
+@media(max-width:520px){
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .money-overview{gap:16px}.ring{width:100px;height:100px}
+  .calendar-large .day{min-height:58px}
+  .category-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <button class="side-close" id="sideClose">← 뒤로</button>
+    <div class="brand">
+      <div class="brand-logo">⌂</div>
+      <div><strong>CONTROL</strong><small>PERSONAL CENTER</small></div>
+    </div>
+    <nav class="nav-section">
+      <button class="nav-main active" data-page="home">⌂ <span>HOME</span></button>
+      <button class="nav-main" data-page="calendar">▦ <span>CALENDAR</span></button>
+
+      <div class="nav-spacer"></div>
+      <button class="nav-main" data-page="money">₩ <span>MONEY</span></button>
+      <button class="nav-sub" data-page="money" data-money-view="all">지출 내역</button>
+      <button class="nav-sub" data-page="money" data-money-view="fixed">고정비 관리</button>
+      <button class="nav-sub" data-page="money">월간 현황</button>
+      <button class="nav-sub" data-action="budget">예산 설정</button>
+
+      <div class="nav-spacer"></div>
+      <button class="nav-main" data-page="project">◇ <span>PROJECT</span></button>
+      <button class="nav-sub" data-page="project">프로젝트 목록</button>
+      <button class="nav-sub" data-action="project">새 프로젝트</button>
+
+      <div class="nav-spacer"></div>
+      <button class="nav-main" data-page="record">▤ <span>RECORD</span></button>
+      <button class="nav-sub" data-page="record" data-record-view="all">전체 기록</button>
+      <button class="nav-sub" data-page="record" data-record-view="메모">메모</button>
+      <button class="nav-sub" data-page="record" data-record-view="아이디어">아이디어</button>
+      <button class="nav-sub" data-page="record" data-record-view="일기">일기</button>
+      <button class="nav-sub" data-page="record" data-record-view="꿈">꿈 기록</button>
+
+      <div class="nav-spacer"></div>
+      <button class="nav-main" data-page="ai">✦ <span>CONTROL AI</span></button>
+      <button class="nav-main" data-page="settings">⚙ <span>설정</span></button>
+    </nav>
+    <div class="side-foot">
+      <button data-action="backup">↓ 전체 백업</button>
+      <label>↑ 백업 복구<input id="restoreInput" type="file" accept=".json" hidden></label>
+      <button data-action="reset">초기화</button>
+      <div class="version">CONTROL v3.0 · LOCAL AUTO SAVE</div>
+    </div>
+  </aside>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <div class="workspace">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn">☰</button>
+      <div class="search-wrap">
+        <div class="search-box">⌕ <input id="globalSearch" placeholder="검색어를 입력하세요... (일정, 지출, 프로젝트, 기록 등)"></div>
+        <div class="search-results hidden" id="searchResults"></div>
+      </div>
+      <div class="top-date" id="topDate"></div>
+      <button class="primary" data-action="quick">＋ 빠른 기록</button>
+    </header>
+
+    <main>
+      <section id="home" class="page active">
+        <div class="hero">
+          <div class="hero-copy">
+            <span class="hero-tag">PERSONAL CONTROL CENTER</span>
+            <h1>지금도, 잘하고 있다.</h1>
+            <p>작은 기록이, 큰 변화를 만든다.</p>
+          </div>
+          <div class="quote-card">
+            <strong>오늘의 한 줄</strong>
+            <p>“어제보다 조금 더 나은 선택을 하자.”</p>
+          </div>
+        </div>
+
+        <div class="welcome">
+          <div><h2>좋은 하루입니다.</h2><p>오늘도 내 삶의 흐름을 한눈에.</p></div>
+          <div class="quick-actions">
+            <button data-action="event">▦ 일정 추가</button>
+            <button data-action="expense">₩ 지출 기록</button>
+            <button data-action="record">▤ 메모 작성</button>
+          </div>
+        </div>
+
+        <div class="dashboard">
+          <div>
+            <article class="card today-card">
+              <div><small>TODAY</small><h2 id="todayTitle"></h2><p id="clock"></p></div>
+              <div class="today-badge">CONTROL</div>
+            </article>
+            <div class="stat-grid">
+              <article class="stat"><div class="ico">▦</div><span>오늘 일정<strong id="homeEventCount">0</strong></span></article>
+              <article class="stat"><div class="ico">✓</div><span>할 일<strong id="homeTaskCount">0</strong></span></article>
+              <article class="stat"><div class="ico">₩</div><span>이번 달 지출<strong id="homeSpend">0원</strong></span></article>
+              <article class="stat"><div class="ico">◫</div><span>사용 가능 금액<strong id="homeRemain">0원</strong></span></article>
+            </div>
+          </div>
+
+          <article class="card home-calendar">
+            <div class="card-head"><h3 id="homeCalTitle">월간 캘린더</h3><div class="actions"><button class="icon-btn" data-cal="home-prev">‹</button><button class="icon-btn" data-cal="home-next">›</button></div></div>
+            <div id="homeCalendar" class="calendar"></div>
+          </article>
+
+          <article class="card schedule-card">
+            <div class="card-head"><h3>오늘 일정</h3><button class="ghost" data-page="calendar">전체보기 ›</button></div>
+            <div id="homeAgenda" class="list tall"></div>
+          </article>
+        </div>
+
+        <div class="lower">
+          <article class="card">
+            <div class="card-head"><h3>이번 달 지출 현황</h3><button class="ghost" data-page="money">상세보기 ›</button></div>
+            <div class="money-overview">
+              <div class="ring" id="budgetRing"><strong id="budgetPct">0%</strong></div>
+              <div class="money-meta">
+                <span>총 지출<b id="homeTotalSpend">0원</b></span>
+                <span>월 예산<b id="homeBudget">0원</b></span>
+                <span>남은 금액<b id="homeBudgetRemain">0원</b></span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h3>진행 프로젝트</h3><button class="ghost" data-page="project">전체보기 ›</button></div>
+            <div id="homeProjects" class="list"></div>
+            <button class="wide-btn" data-action="project">＋ 새 프로젝트 추가</button>
+          </article>
+
+          <article class="card recent-card">
+            <div class="card-head"><h3>최근 기록</h3><button class="ghost" data-page="record">전체보기 ›</button></div>
+            <div id="homeRecords" class="list"></div>
+          </article>
+        </div>
+
+        <article class="card tools">
+          <div class="card-head"><h3>빠른 도구</h3></div>
+          <div class="tool-grid">
+            <button class="tool" data-action="task">✓<span>할 일</span></button>
+            <button class="tool" data-action="event">▦<span>일정</span></button>
+            <button class="tool" data-action="record">▤<span>메모</span></button>
+            <button class="tool" data-action="budget">◎<span>예산 설정</span></button>
+            <button class="tool" data-action="backup">☁<span>백업</span></button>
+          </div>
+        </article>
+
+        <div class="home-footer">“기록하는 삶이, 원하는 삶에 가까워지게 만든다.” <em>Small Records, Big Changes.</em></div>
+      </section>
+
+      <section id="calendar" class="page">
+        <div class="section-head">
+          <div><h1>CALENDAR</h1><p>일정 · 할 일 · 기록 · 지출을 하나의 시간축으로.</p></div>
+          <div><button class="secondary" data-action="task">＋ 할 일</button> <button class="primary" data-action="event">＋ 일정 추가</button></div>
+        </div>
+        <div class="calendar-page">
+          <article class="card">
+            <div class="card-head">
+              <h2 id="fullCalTitle">월간 캘린더</h2>
+              <div class="actions"><button class="icon-btn" data-cal="prev">‹</button><button class="icon-btn" data-cal="today">오늘</button><button class="icon-btn" data-cal="next">›</button></div>
+            </div>
+            <div id="fullCalendar" class="calendar calendar-large"></div>
+          </article>
+          <aside class="card">
+            <div class="card-head"><h3 id="selectedDateTitle">날짜 선택</h3><button class="ghost" data-action="event">＋ 일정</button></div>
+            <div id="selectedAgenda" class="day-labels"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="money" class="page">
+        <div class="section-head">
+          <div><h1>MONEY</h1><p>고정비와 변동지출, 월 예산을 한 번에.</p></div>
+          <button class="primary" data-action="expense">＋ 지출 기록</button>
+        </div>
+        <div class="stats-row">
+          <article class="stat-card"><span>월 예산</span><strong id="moneyBudget">0원</strong><button data-action="budget">설정</button></article>
+          <article class="stat-card"><span>고정비</span><strong id="moneyFixed">0원</strong></article>
+          <article class="stat-card"><span>변동지출</span><strong id="moneyVariable">0원</strong></article>
+          <article class="stat-card"><span>잔여</span><strong id="moneyRemain">0원</strong></article>
+        </div>
+        <article class="card">
+          <div class="filters">
+            <input type="month" id="moneyMonth">
+            <select id="moneyKind"><option value="all">전체</option><option value="fixed">고정비</option><option value="variable">변동비</option></select>
+            <input id="moneySearch" placeholder="분류/메모 검색">
+          </div>
+          <div id="expenseTable" class="table"></div>
+        </article>
+        <article class="card" style="margin-top:12px">
+          <div class="card-head"><h3>카테고리 현황</h3></div>
+          <div id="categoryStats" class="category-grid"></div>
+        </article>
+      </section>
+
+      <section id="project" class="page">
+        <div class="section-head">
+          <div><h1>PROJECT</h1><p>개인 프로젝트의 진행 상태와 메모.</p></div>
+          <button class="primary" data-action="project">＋ 프로젝트</button>
+        </div>
+        <div class="filters">
+          <select id="projectStatus"><option value="all">전체 상태</option><option>아이디어</option><option>진행중</option><option>관찰중</option><option>보류</option><option>완료</option></select>
+          <input id="projectSearch" placeholder="프로젝트 검색">
+        </div>
+        <div id="projectGrid" class="project-grid"></div>
+      </section>
+
+      <section id="record" class="page">
+        <div class="section-head">
+          <div><h1>RECORD</h1><p>메모 · 아이디어 · 일기 · 꿈을 날짜별로 쌓습니다.</p></div>
+          <button class="primary" data-action="record">＋ 새 기록</button>
+        </div>
+        <div class="filters">
+          <select id="recordType"><option value="all">전체</option><option>메모</option><option>아이디어</option><option>일기</option><option>꿈</option></select>
+          <input id="recordSearch" placeholder="기록 검색">
+        </div>
+        <div id="recordGrid" class="record-grid"></div>
+      </section>
+
+      <section id="ai" class="page">
+        <div class="ai-shell">
+          <div class="ai-orb">✦</div>
+          <h1>CONTROL AI</h1>
+          <p>V3는 내 데이터 로컬 검색 모드입니다. 실제 AI API는 데이터 구조가 안정된 뒤 연결합니다.</p>
+          <div id="aiMessages" class="ai-messages"><div class="msg bot">예: “오늘 일정”, “이번 달 지출”, “진행 프로젝트”, “최근 기록”, “할 일”</div></div>
+          <form id="aiForm" class="ai-form"><input id="aiInput" autocomplete="off" placeholder="관제센터에 물어보기…"><button class="primary">전송</button></form>
+        </div>
+      </section>
+
+      <section id="settings" class="page">
+        <div class="section-head"><div><h1>SETTINGS</h1><p>데이터 백업과 개인 관제센터 설정.</p></div></div>
+        <div class="settings-grid">
+          <article class="setting-card"><h3>데이터 백업</h3><p>현재 일정, 지출, 프로젝트, 기록, 할 일을 JSON 한 파일로 저장합니다.</p><div class="setting-actions"><button class="primary" data-action="backup">백업 다운로드</button><label class="secondary">백업 복구<input id="restoreInput2" type="file" accept=".json" hidden></label></div></article>
+          <article class="setting-card"><h3>데이터 초기화</h3><p>이 기기의 로컬 데이터를 초기 상태로 되돌립니다.</p><div class="setting-actions"><button class="secondary" data-action="reset">전체 초기화</button></div></article>
+          <article class="setting-card"><h3>저장 방식</h3><p>현재 버전은 브라우저 localStorage 자동 저장입니다. Firebase 연결 전에도 바로 사용할 수 있습니다.</p></article>
+          <article class="setting-card"><h3>다음 단계</h3><p>Firebase 로그인/동기화 → CONTROL AI 서버 연결 → 캘린더 반복 일정/알림 순으로 확장할 수 있습니다.</p></article>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<nav class="mobile-nav">
+  <button class="active" data-page="home"><b>⌂</b>HOME</button>
+  <button data-page="calendar"><b>▦</b>CAL</button>
+  <button data-page="money"><b>₩</b>MONEY</button>
+  <button data-page="project"><b>◇</b>PROJECT</button>
+  <button data-action="drawer"><b>☰</b>MORE</button>
+</nav>
+
+<div class="modal hidden" id="modal">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose">×</button></div>
+    <form id="modalForm"></form>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const STORE='control_center_v3';
+const LEGACY='pcc_v1';
+const pad=n=>String(n).padStart(2,'0');
+const dateKey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const monthKey=d=>dateKey(d).slice(0,7);
+const now=()=>new Date();
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const won=n=>Number(n||0).toLocaleString('ko-KR')+'원';
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+const seed=()=>({
+  version:3,budget:0,
+  events:[], tasks:[], expenses:[],
+  projects:[
+    {id:uid(),name:'트레이딩 엔진',status:'관찰중',memo:'전략 개선 및 실전 관찰',updated:dateKey(now())},
+    {id:uid(),name:'블로그',status:'진행중',memo:'글감과 발행 아이디어 관리',updated:dateKey(now())},
+    {id:uid(),name:'로또 연구',status:'보류',memo:'연구/검증 자료 정리',updated:dateKey(now())}
+  ],
+  records:[]
+});
+function normalize(raw){
+  const base=seed(), d={...base,...raw};
+  ['events','tasks','expenses','projects','records'].forEach(k=>{if(!Array.isArray(d[k]))d[k]=[]});
+  d.budget=Number(d.budget||0);
+  return d;
+}
+function load(){
+  try{
+    const v3=localStorage.getItem(STORE);
+    if(v3) return normalize(JSON.parse(v3));
+    const old=localStorage.getItem(LEGACY);
+    if(old){ const d=normalize(JSON.parse(old)); localStorage.setItem(STORE,JSON.stringify(d)); return d; }
+  }catch(e){ console.warn(e); }
+  return seed();
+}
+let data=load();
+let viewDate=new Date(now().getFullYear(),now().getMonth(),1);
+let homeViewDate=new Date(now().getFullYear(),now().getMonth(),1);
+let selectedDate=dateKey(now());
+let currentPage='home';
+
+function save(){localStorage.setItem(STORE,JSON.stringify(data));}
+function toast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1800);
+}
+function empty(text='아직 기록이 없습니다.'){return `<div class="empty">${esc(text)}</div>`}
+function openDrawer(){$('#sidebar').classList.add('open');$('#backdrop').classList.add('show');document.body.classList.add('drawer-open')}
+function closeDrawer(){$('#sidebar').classList.remove('open');$('#backdrop').classList.remove('show');document.body.classList.remove('drawer-open')}
+
+function goto(page){
+  currentPage=page;
+  $$('.page').forEach(x=>x.classList.toggle('active',x.id===page));
+  $$('.nav-main[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
+  $$('.mobile-nav [data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
+  closeDrawer();
+  if(page==='calendar') renderCalendars();
+  if(page==='money') renderMoney();
+  if(page==='project') renderProjects();
+  if(page==='record') renderRecords();
+  window.scrollTo({top:0,behavior:'instant'});
+}
+
+function renderTop(){
+  const d=now();
+  $('#topDate').innerHTML=`<span>${d.getFullYear()}. ${pad(d.getMonth()+1)}. ${pad(d.getDate())}</span><b>${d.toLocaleDateString('ko-KR',{weekday:'short'})}</b>`;
+  $('#todayTitle').textContent=d.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+}
+function renderClock(){
+  $('#clock').textContent=now().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+}
+
+function itemsForDate(ds){
+  const arr=[];
+  data.events.filter(x=>x.date===ds).forEach(x=>arr.push({kind:'event',title:x.title,sub:`${x.time||'시간 미정'} · ${x.type||'일정'}`}));
+  data.tasks.filter(x=>x.date===ds).forEach(x=>arr.push({kind:'task',title:x.title,sub:x.done?'완료':'할 일'}));
+  data.records.filter(x=>x.date===ds).forEach(x=>arr.push({kind:'record',title:x.title,sub:x.type||'기록'}));
+  data.expenses.filter(x=>x.date===ds).forEach(x=>arr.push({kind:'expense',title:`${x.category} ${won(x.amount)}`,sub:x.kind==='fixed'?'고정비':'변동비'}));
+  return arr;
+}
+function buildCalendar(target,base,large=false){
+  const y=base.getFullYear(),m=base.getMonth();
+  const first=new Date(y,m,1), start=new Date(y,m,1-first.getDay());
+  let h=['일','월','화','수','목','금','토'].map((w,i)=>`<div class="cal-head ${i===0?'sun':i===6?'sat':''}">${w}</div>`).join('');
+  for(let i=0;i<42;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const ds=dateKey(d), arr=itemsForDate(ds);
+    const kinds=[...new Set(arr.map(x=>x.kind))];
+    h+=`<button class="day ${d.getMonth()!==m?'out':''} ${ds===selectedDate?'selected':''} ${ds===dateKey(now())?'today':''}" data-date="${ds}">
+      <span class="num">${d.getDate()}</span>
+      <span class="dots">${kinds.slice(0,4).map(k=>`<i class="dot ${k}"></i>`).join('')}</span>
+    </button>`;
+  }
+  target.innerHTML=h;
+  target.querySelectorAll('.day').forEach(b=>b.onclick=()=>{
+    selectedDate=b.dataset.date;
+    renderCalendars();
+    if(currentPage==='home') goto('calendar');
+  });
+}
+function renderSelectedAgenda(){
+  const d=new Date(selectedDate+'T00:00:00');
+  $('#selectedDateTitle').textContent=d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'});
+  const arr=itemsForDate(selectedDate);
+  $('#selectedAgenda').innerHTML=arr.length?arr.map(x=>`<div class="agenda-item ${x.kind}"><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></div>`).join(''):empty('이 날짜의 기록이 없습니다.');
+}
+function renderCalendars(){
+  $('#homeCalTitle').textContent=`${homeViewDate.getFullYear()}년 ${homeViewDate.getMonth()+1}월`;
+  $('#fullCalTitle').textContent=`${viewDate.getFullYear()}년 ${viewDate.getMonth()+1}월`;
+  buildCalendar($('#homeCalendar'),homeViewDate);
+  buildCalendar($('#fullCalendar'),viewDate,true);
+  renderSelectedAgenda();
+}
+
+function renderHome(){
+  const today=dateKey(now()), mk=monthKey(now());
+  const events=data.events.filter(x=>x.date===today);
+  const tasks=data.tasks.filter(x=>!x.done);
+  const expenses=data.expenses.filter(x=>x.date.startsWith(mk));
+  const spent=expenses.reduce((a,x)=>a+Number(x.amount||0),0);
+  const remain=data.budget-spent;
+  $('#homeEventCount').textContent=events.length;
+  $('#homeTaskCount').textContent=tasks.length;
+  $('#homeSpend').textContent=won(spent);
+  $('#homeRemain').textContent=data.budget?won(remain):'-';
+  $('#homeTotalSpend').textContent=won(spent);
+  $('#homeBudget').textContent=won(data.budget);
+  $('#homeBudgetRemain').textContent=data.budget?won(remain):'-';
+  const pct=data.budget?Math.min(100,Math.round(spent/data.budget*100)):0;
+  $('#budgetPct').textContent=pct+'%';
+  $('#budgetRing').style.setProperty('--pct',pct+'%');
+  $('#homeAgenda').innerHTML=events.length?events.slice().sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99')).map(x=>`
+    <div class="list-item"><span class="marker" style="background:#46a7ff"></span><div class="main"><b>${esc(x.title)}</b><small>${esc(x.time||'시간 미정')} · ${esc(x.type||'일정')}</small></div></div>`).join(''):empty('오늘 등록된 일정이 없습니다.');
+  const ps=data.projects.filter(x=>x.status!=='완료').slice(0,4);
+  $('#homeProjects').innerHTML=ps.length?ps.map(x=>`<div class="list-item"><span class="marker status-${esc(x.status)}"></span><div class="main"><b>${esc(x.name)}</b><small>${esc(x.status)} · ${esc(x.memo||'')}</small></div></div>`).join(''):empty('진행 중인 프로젝트가 없습니다.');
+  const rs=data.records.slice().sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||'')).slice(0,4);
+  $('#homeRecords').innerHTML=rs.length?rs.map(x=>`<div class="list-item"><span class="marker" style="background:#ffad5d"></span><div class="main"><b>${esc(x.title)}</b><small>${esc(x.type||'기록')} · ${esc(x.date)}</small></div></div>`).join(''):empty('최근 기록이 없습니다.');
+  renderCalendars();
+}
+
+function renderMoney(){
+  const mk=$('#moneyMonth').value||monthKey(now());
+  if(!$('#moneyMonth').value) $('#moneyMonth').value=mk;
+  const monthAll=data.expenses.filter(x=>x.date.startsWith(mk));
+  const fixed=monthAll.filter(x=>x.kind==='fixed').reduce((a,x)=>a+Number(x.amount||0),0);
+  const variable=monthAll.filter(x=>x.kind!=='fixed').reduce((a,x)=>a+Number(x.amount||0),0);
+  $('#moneyBudget').textContent=won(data.budget);
+  $('#moneyFixed').textContent=won(fixed);
+  $('#moneyVariable').textContent=won(variable);
+  $('#moneyRemain').textContent=data.budget?won(data.budget-fixed-variable):'-';
+
+  const kind=$('#moneyKind').value, term=$('#moneySearch').value.trim().toLowerCase();
+  const arr=monthAll.filter(x=>(kind==='all'||x.kind===kind)&&(`${x.category} ${x.memo||''}`.toLowerCase().includes(term))).sort((a,b)=>b.date.localeCompare(a.date));
+  $('#expenseTable').innerHTML=arr.length?arr.map(x=>`
+    <div class="row">
+      <span>${esc(x.date)}</span><span class="pill">${x.kind==='fixed'?'고정':'변동'}</span>
+      <span>${esc(x.category)}</span><span>${esc(x.memo||'')}</span>
+      <span class="amount">${won(x.amount)}</span><button class="delete" data-del-exp="${x.id}">×</button>
+    </div>`).join(''):empty('해당 조건의 지출이 없습니다.');
+
+  const cats={}; monthAll.forEach(x=>cats[x.category]=(cats[x.category]||0)+Number(x.amount||0));
+  const max=Math.max(1,...Object.values(cats));
+  $('#categoryStats').innerHTML=Object.keys(cats).length?Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+    <div class="cat-row"><div class="top"><b>${esc(k)}</b><span>${won(v)}</span></div><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join(''):empty('카테고리 데이터가 없습니다.');
+
+  $$('[data-del-exp]').forEach(b=>b.onclick=()=>{data.expenses=data.expenses.filter(x=>x.id!==b.dataset.delExp);save();renderAll();toast('지출을 삭제했습니다.')});
+}
+
+function renderProjects(){
+  const status=$('#projectStatus').value,term=$('#projectSearch').value.trim().toLowerCase();
+  const arr=data.projects.filter(x=>(status==='all'||x.status===status)&&(`${x.name} ${x.memo||''}`.toLowerCase().includes(term))).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
+  $('#projectGrid').innerHTML=arr.length?arr.map(x=>`
+    <article class="project-card">
+      <span class="pill"><i class="status-dot status-${esc(x.status)}"></i>${esc(x.status)}</span>
+      <h3>${esc(x.name)}</h3><p>${esc(x.memo||'메모 없음')}</p>
+      <div class="card-foot"><span>업데이트 ${esc(x.updated||'')}</span><button class="delete" data-del-project="${x.id}">삭제</button></div>
+    </article>`).join(''):empty('프로젝트가 없습니다.');
+  $$('[data-del-project]').forEach(b=>b.onclick=()=>{data.projects=data.projects.filter(x=>x.id!==b.dataset.delProject);save();renderAll();toast('프로젝트를 삭제했습니다.')});
+}
+
+function renderRecords(){
+  const type=$('#recordType').value,term=$('#recordSearch').value.trim().toLowerCase();
+  const arr=data.records.filter(x=>(type==='all'||x.type===type)&&(`${x.title} ${x.content||''}`.toLowerCase().includes(term))).sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||''));
+  $('#recordGrid').innerHTML=arr.length?arr.map(x=>`
+    <article class="record-card"><span class="pill">${esc(x.type||'기록')}</span><h3>${esc(x.title)}</h3>
+    <p>${esc(x.content||'')}</p><div class="card-foot"><span>${esc(x.date)}</span><button class="delete" data-del-record="${x.id}">삭제</button></div></article>`).join(''):empty('기록이 없습니다.');
+  $$('[data-del-record]').forEach(b=>b.onclick=()=>{data.records=data.records.filter(x=>x.id!==b.dataset.delRecord);save();renderAll();toast('기록을 삭제했습니다.')});
+}
+
+function renderAll(){renderTop();renderHome();renderMoney();renderProjects();renderRecords();}
+
+function modal(title,html,onSubmit){
+  $('#modalTitle').textContent=title; $('#modalForm').innerHTML=html+`<button class="primary" type="submit">저장</button>`;
+  $('#modal').classList.remove('hidden');
+  $('#modalForm').onsubmit=e=>{
+    e.preventDefault(); const f=Object.fromEntries(new FormData(e.currentTarget));
+    onSubmit(f); save(); $('#modal').classList.add('hidden'); renderAll(); toast('저장했습니다.');
+  };
+}
+function closeModal(){$('#modal').classList.add('hidden')}
+
+function eventModal(){
+  modal('일정 추가',`
+    <div class="form-row"><label>날짜<input name="date" type="date" value="${selectedDate}" required></label><label>시간<input name="time" type="time"></label></div>
+    <label>제목<input name="title" placeholder="일정 제목" required></label>
+    <label>분류<select name="type"><option>개인</option><option>회사</option><option>약속</option><option>기타</option></select></label>
+    <label>메모<textarea name="memo" placeholder="선택"></textarea></label>`,
+    f=>data.events.push({id:uid(),...f,created:new Date().toISOString()})
+  );
+}
+function taskModal(){
+  modal('할 일 추가',`
+    <label>할 일<input name="title" required placeholder="해야 할 일"></label>
+    <label>날짜<input name="date" type="date" value="${selectedDate}"></label>`,
+    f=>data.tasks.push({id:uid(),...f,done:false,created:new Date().toISOString()})
+  );
+}
+function expenseModal(){
+  modal('지출 기록',`
+    <div class="form-row"><label>날짜<input name="date" type="date" value="${dateKey(now())}" required></label><label>구분<select name="kind"><option value="variable">변동비</option><option value="fixed">고정비</option></select></label></div>
+    <div class="form-row"><label>분류<input name="category" placeholder="편의점 / 배달 / 월세..." required></label><label>금액<input name="amount" type="number" min="0" required></label></div>
+    <label>메모<input name="memo" placeholder="선택"></label>`,
+    f=>data.expenses.push({id:uid(),...f,amount:Number(f.amount),created:new Date().toISOString()})
+  );
+}
+function recordModal(defaultType='메모'){
+  modal('새 기록',`
+    <div class="form-row"><label>종류<select name="type">${['메모','아이디어','일기','꿈'].map(x=>`<option ${x===defaultType?'selected':''}>${x}</option>`).join('')}</select></label><label>날짜<input name="date" type="date" value="${dateKey(now())}" required></label></div>
+    <label>제목<input name="title" required placeholder="제목"></label>
+    <label>내용<textarea name="content" placeholder="내용을 자유롭게 기록하세요."></textarea></label>`,
+    f=>data.records.push({id:uid(),...f,created:new Date().toISOString()})
+  );
+}
+function projectModal(){
+  modal('프로젝트 추가',`
+    <label>프로젝트명<input name="name" required></label>
+    <label>상태<select name="status"><option>아이디어</option><option>진행중</option><option>관찰중</option><option>보류</option><option>완료</option></select></label>
+    <label>메모<textarea name="memo"></textarea></label>`,
+    f=>data.projects.push({id:uid(),...f,updated:dateKey(now())})
+  );
+}
+function budgetModal(){
+  modal('월 예산 설정',`<label>월 예산<input name="budget" type="number" min="0" value="${data.budget}" required></label>`,f=>data.budget=Number(f.budget));
+}
+function quickModal(){
+  modal('빠른 기록',`
+    <label>종류<select name="quickType"><option value="record">메모/기록</option><option value="task">할 일</option><option value="event">일정</option><option value="expense">지출</option></select></label>
+    <label>내용<input name="text" required placeholder="예: 세차하기 / 점심 9000원"></label>`,
+    f=>{
+      const ds=dateKey(now());
+      if(f.quickType==='task') data.tasks.push({id:uid(),title:f.text,date:ds,done:false,created:new Date().toISOString()});
+      else if(f.quickType==='event') data.events.push({id:uid(),title:f.text,date:ds,time:'',type:'개인',created:new Date().toISOString()});
+      else if(f.quickType==='expense'){
+        const m=f.text.match(/([0-9][0-9,]*)/); const amount=m?Number(m[1].replace(/,/g,'')):0;
+        data.expenses.push({id:uid(),date:ds,kind:'variable',category:'기타',amount,memo:f.text,created:new Date().toISOString()});
+      } else data.records.push({id:uid(),type:'메모',title:f.text,date:ds,content:'',created:new Date().toISOString()});
+    }
+  );
+}
+function backup(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`control-center-backup-${dateKey(now())}.json`;a.click();URL.revokeObjectURL(a.href);toast('백업 파일을 만들었습니다.');
+}
+async function restoreFile(file){
+  try{const raw=JSON.parse(await file.text());data=normalize(raw);save();renderAll();toast('백업을 복구했습니다.');}
+  catch(e){alert('올바른 백업 JSON 파일이 아닙니다.');}
+}
+function resetAll(){
+  if(confirm('관제센터 로컬 데이터를 모두 초기화할까요?')){data=seed();save();renderAll();toast('초기화했습니다.');}
+}
+function runAction(a){
+  ({event:eventModal,task:taskModal,expense:expenseModal,record:()=>recordModal(),project:projectModal,budget:budgetModal,quick:quickModal,backup,reset:resetAll,drawer:openDrawer}[a]||(()=>{}))();
+}
+
+function searchAll(term){
+  term=term.trim().toLowerCase(); if(!term){$('#searchResults').classList.add('hidden');return}
+  const hits=[];
+  data.events.forEach(x=>{if(`${x.title} ${x.type||''} ${x.memo||''}`.toLowerCase().includes(term))hits.push({type:'일정',title:x.title,sub:x.date,page:'calendar'})});
+  data.expenses.forEach(x=>{if(`${x.category} ${x.memo||''}`.toLowerCase().includes(term))hits.push({type:'지출',title:`${x.category} ${won(x.amount)}`,sub:x.date,page:'money'})});
+  data.projects.forEach(x=>{if(`${x.name} ${x.memo||''}`.toLowerCase().includes(term))hits.push({type:'프로젝트',title:x.name,sub:x.status,page:'project'})});
+  data.records.forEach(x=>{if(`${x.title} ${x.content||''} ${x.type||''}`.toLowerCase().includes(term))hits.push({type:x.type||'기록',title:x.title,sub:x.date,page:'record'})});
+  const box=$('#searchResults');
+  box.innerHTML=hits.length?hits.slice(0,12).map((x,i)=>`<button class="search-hit" data-hit-page="${x.page}"><b>[${esc(x.type)}] ${esc(x.title)}</b><small>${esc(x.sub)}</small></button>`).join(''):`<div class="empty" style="min-height:70px">검색 결과가 없습니다.</div>`;
+  box.classList.remove('hidden');
+  $$('[data-hit-page]').forEach(b=>b.onclick=()=>{goto(b.dataset.hitPage);box.classList.add('hidden')});
+}
+
+function aiReply(q){
+  const s=q.toLowerCase(), today=dateKey(now()), mk=monthKey(now());
+  if(/오늘.*일정|일정/.test(s)){
+    const a=data.events.filter(x=>x.date===today).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+    return a.length?a.map(x=>`${x.time||'--:--'}  ${x.title}`).join('\n'):'오늘 등록된 일정이 없습니다.';
+  }
+  if(/할 ?일/.test(s)){
+    const a=data.tasks.filter(x=>!x.done);
+    return a.length?a.map(x=>`□ ${x.title}${x.date?' · '+x.date:''}`).join('\n'):'남은 할 일이 없습니다.';
+  }
+  if(/지출|돈|얼마/.test(s)){
+    const a=data.expenses.filter(x=>x.date.startsWith(mk)), sum=a.reduce((n,x)=>n+Number(x.amount||0),0);
+    return `이번 달 등록 지출은 ${won(sum)}입니다.\n${data.budget?`예산 ${won(data.budget)} / 잔여 ${won(data.budget-sum)}`:'월 예산은 아직 설정하지 않았습니다.'}`;
+  }
+  if(/프로젝트/.test(s)){
+    return data.projects.length?data.projects.map(x=>`• ${x.name} — ${x.status}`).join('\n'):'프로젝트가 없습니다.';
+  }
+  if(/최근|기록|메모/.test(s)){
+    const a=data.records.slice().sort((a,b)=>(b.created||'').localeCompare(a.created||'')).slice(0,5);
+    return a.length?a.map(x=>`${x.date} [${x.type}] ${x.title}`).join('\n'):'저장된 기록이 없습니다.';
+  }
+  return '현재 V3는 로컬 데이터 명령 모드입니다.\n“오늘 일정”, “할 일”, “이번 달 지출”, “프로젝트”, “최근 기록”처럼 물어보세요.';
+}
+function addMsg(text,who){
+  const d=document.createElement('div');d.className=`msg ${who}`;d.textContent=text;$('#aiMessages').appendChild(d);$('#aiMessages').scrollTop=999999;
+}
+
+function bind(){
+  $$('[data-page]').forEach(b=>b.addEventListener('click',()=>goto(b.dataset.page)));
+  $$('[data-action]').forEach(b=>b.addEventListener('click',()=>runAction(b.dataset.action)));
+  $('#menuBtn').onclick=openDrawer; $('#sideClose').onclick=closeDrawer; $('#backdrop').onclick=closeDrawer;
+  $('#modalClose').onclick=closeModal; $('#modal').addEventListener('click',e=>{if(e.target===$('#modal'))closeModal()});
+  $$('[data-cal]').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.cal;
+    if(a==='prev'){viewDate.setMonth(viewDate.getMonth()-1)}
+    if(a==='next'){viewDate.setMonth(viewDate.getMonth()+1)}
+    if(a==='today'){viewDate=new Date(now().getFullYear(),now().getMonth(),1);selectedDate=dateKey(now())}
+    if(a==='home-prev'){homeViewDate.setMonth(homeViewDate.getMonth()-1)}
+    if(a==='home-next'){homeViewDate.setMonth(homeViewDate.getMonth()+1)}
+    renderCalendars();
+  });
+  $('#moneyMonth').onchange=renderMoney; $('#moneyKind').onchange=renderMoney; $('#moneySearch').oninput=renderMoney;
+  $('#projectStatus').onchange=renderProjects; $('#projectSearch').oninput=renderProjects;
+  $('#recordType').onchange=renderRecords; $('#recordSearch').oninput=renderRecords;
+  $$('[data-money-view]').forEach(b=>b.addEventListener('click',()=>{$('#moneyKind').value=b.dataset.moneyView;renderMoney()}));
+  $$('[data-record-view]').forEach(b=>b.addEventListener('click',()=>{$('#recordType').value=b.dataset.recordView;renderRecords()}));
+  $('#globalSearch').oninput=e=>searchAll(e.target.value);
+  document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))$('#searchResults').classList.add('hidden')});
+  $('#restoreInput').onchange=e=>e.target.files[0]&&restoreFile(e.target.files[0]);
+  $('#restoreInput2').onchange=e=>e.target.files[0]&&restoreFile(e.target.files[0]);
+  $('#aiForm').onsubmit=e=>{e.preventDefault();const inp=$('#aiInput'),q=inp.value.trim();if(!q)return;addMsg(q,'user');inp.value='';setTimeout(()=>addMsg(aiReply(q),'bot'),120)};
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeModal()}});
+}
+
+bind(); renderAll(); renderClock(); setInterval(renderClock,1000);
+})();
+</script>
+</body>
+</html>
