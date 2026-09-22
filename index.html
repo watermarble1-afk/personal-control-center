@@ -63,6 +63,9 @@ button{cursor:pointer}
 .search-hit:hover{background:#11253a}
 .search-hit small{display:block;color:#6f879d;margin-top:2px}
 .top-date{margin-left:auto;color:#9eb0c0;font-size:11px;text-align:right}
+.firebase-user{display:flex;align-items:center;gap:7px}
+.firebase-user #syncLabel{font-size:9px;color:#6f879d;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.firebase-user .secondary{padding:7px 9px;font-size:10px}
 .top-date b{color:#fff;display:block;font-size:12px}
 .primary{border:0;border-radius:9px;background:linear-gradient(135deg,var(--blue),#0877eb);color:#fff;padding:10px 14px;font-weight:700}
 .secondary{border:1px solid var(--line2);border-radius:9px;background:#0f1e2f;color:#dbe7f2;padding:9px 12px}
@@ -241,7 +244,7 @@ main{padding:0 22px 52px;max-width:1600px;margin:0 auto}
   body.drawer-open{overflow:hidden}
   .topbar{height:64px;padding:0 10px}
   .search-wrap{display:none}.top-date{display:none}
-  .topbar>.primary{font-size:10px;padding:9px 11px}
+  .topbar>.primary{font-size:10px;padding:9px 11px}.firebase-user #syncLabel{display:none}.firebase-user .secondary{padding:7px 8px;font-size:9px}
   main{padding:0 10px 92px}
   .page{padding:0}
   .hero{height:135px;margin:0 -10px 14px;padding:18px}
@@ -333,6 +336,11 @@ main{padding:0 22px 52px;max-width:1600px;margin:0 auto}
         <div class="search-results hidden" id="searchResults"></div>
       </div>
       <div class="top-date" id="topDate"></div>
+      <div class="firebase-user">
+        <span id="syncLabel">LOCAL</span>
+        <button class="secondary" id="firebaseLoginBtn">Google 로그인</button>
+        <button class="secondary hidden" id="firebaseLogoutBtn">로그아웃</button>
+      </div>
       <button class="primary" data-action="quick">＋ 빠른 기록</button>
     </header>
 
@@ -577,7 +585,10 @@ let homeViewDate=new Date(now().getFullYear(),now().getMonth(),1);
 let selectedDate=dateKey(now());
 let currentPage='home';
 
-function save(){localStorage.setItem(STORE,JSON.stringify(data));}
+function save(){
+  localStorage.setItem(STORE,JSON.stringify(data));
+  if(typeof window.ccCloudSave==='function') window.ccCloudSave(data);
+}
 function toast(msg){
   const t=$('#toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1800);
@@ -726,6 +737,12 @@ function renderRecords(){
 }
 
 function renderAll(){renderTop();renderHome();renderMoney();renderProjects();renderRecords();}
+window.ccGetData=()=>JSON.parse(JSON.stringify(data));
+window.ccApplyCloudData=raw=>{
+  data=normalize(raw||{});
+  localStorage.setItem(STORE,JSON.stringify(data));
+  renderAll();
+};
 
 function modal(title,html,onSubmit){
   $('#modalTitle').textContent=title; $('#modalForm').innerHTML=html+`<button class="primary" type="submit">저장</button>`;
@@ -880,5 +897,115 @@ function bind(){
 bind(); renderAll(); renderClock(); setInterval(renderClock,1000);
 })();
 </script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+/*
+  ↓↓↓ Firebase Console > Project settings > Your apps > Web app 에서
+  firebaseConfig 값을 아래에 그대로 넣으세요.
+*/
+const firebaseConfig = {
+  apiKey: "AIzaSyApNsGI_SQaWibT3NIPQ98gD6e6ET8QAI4",
+  authDomain: "personal-control-center-fba19.firebaseapp.com",
+  projectId: "personal-control-center-fba19",
+  storageBucket: "personal-control-center-fba19.firebasestorage.app",
+  messagingSenderId: "646179009269",
+  appId: "1:646179009269:web:9d4e465800bf89ea398bbc"
+};
+
+const configured = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.authDomain;
+const loginBtn = document.getElementById("firebaseLoginBtn");
+const logoutBtn = document.getElementById("firebaseLogoutBtn");
+const syncLabel = document.getElementById("syncLabel");
+
+if (!configured) {
+  syncLabel.textContent = "FIREBASE 미설정";
+  loginBtn.textContent = "Firebase 설정 필요";
+  loginBtn.onclick = () => alert("Firebase 설정값(firebaseConfig)을 먼저 넣어주세요.");
+} else {
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  let currentUser = null;
+  let cloudTimer = null;
+  let applyingCloud = false;
+
+  function userDoc(uid){
+    return doc(db, "users", uid);
+  }
+
+  async function pushCloud(payload){
+    if (!currentUser || applyingCloud) return;
+    syncLabel.textContent = "저장 중…";
+    await setDoc(userDoc(currentUser.uid), {
+      data: payload,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    syncLabel.textContent = "SYNC 완료";
+  }
+
+  window.ccCloudSave = payload => {
+    if (!currentUser || applyingCloud) return;
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(() => {
+      pushCloud(payload).catch(err => {
+        console.error(err);
+        syncLabel.textContent = "SYNC 오류";
+      });
+    }, 500);
+  };
+
+  loginBtn.onclick = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (e) {
+      console.error(e);
+      alert("Google 로그인에 실패했습니다.\n" + (e?.message || e));
+    }
+  };
+
+  logoutBtn.onclick = () => signOut(auth);
+
+  onAuthStateChanged(auth, async user => {
+    currentUser = user || null;
+    loginBtn.classList.toggle("hidden", !!user);
+    logoutBtn.classList.toggle("hidden", !user);
+
+    if (!user) {
+      syncLabel.textContent = "LOCAL";
+      return;
+    }
+
+    syncLabel.textContent = user.email || "로그인됨";
+
+    try {
+      const snap = await getDoc(userDoc(user.uid));
+      if (snap.exists() && snap.data()?.data) {
+        applyingCloud = true;
+        window.ccApplyCloudData(snap.data().data);
+        applyingCloud = false;
+        syncLabel.textContent = "SYNC 완료";
+      } else {
+        await pushCloud(window.ccGetData());
+      }
+    } catch (e) {
+      applyingCloud = false;
+      console.error(e);
+      syncLabel.textContent = "SYNC 오류";
+      alert("Firebase 데이터를 불러오지 못했습니다.\nFirestore Rules와 Authorized domains를 확인해주세요.");
+    }
+  });
+}
+</script>
+
 </body>
 </html>
