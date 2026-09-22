@@ -904,7 +904,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, serverTimestamp
+  getFirestore, doc, getDoc, setDoc, serverTimestamp, onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 /*
@@ -935,9 +935,11 @@ if (!configured) {
   const db = getFirestore(app);
   const provider = new GoogleAuthProvider();
 
+
   let currentUser = null;
   let cloudTimer = null;
   let applyingCloud = false;
+  let unsubscribeLive = null;
 
   function userDoc(uid){
     return doc(db, "users", uid);
@@ -950,7 +952,7 @@ if (!configured) {
       data: payload,
       updatedAt: serverTimestamp()
     }, { merge: true });
-    syncLabel.textContent = "SYNC 완료";
+    syncLabel.textContent = "LIVE SYNC";
   }
 
   window.ccCloudSave = payload => {
@@ -961,7 +963,7 @@ if (!configured) {
         console.error(err);
         syncLabel.textContent = "SYNC 오류";
       });
-    }, 500);
+    }, 350);
   };
 
   loginBtn.onclick = async () => {
@@ -976,6 +978,11 @@ if (!configured) {
   logoutBtn.onclick = () => signOut(auth);
 
   onAuthStateChanged(auth, async user => {
+    if (unsubscribeLive) {
+      unsubscribeLive();
+      unsubscribeLive = null;
+    }
+
     currentUser = user || null;
     loginBtn.classList.toggle("hidden", !!user);
     logoutBtn.classList.toggle("hidden", !user);
@@ -985,25 +992,52 @@ if (!configured) {
       return;
     }
 
-    syncLabel.textContent = user.email || "로그인됨";
+    syncLabel.textContent = "연결 중…";
 
     try {
-      const snap = await getDoc(userDoc(user.uid));
-      if (snap.exists() && snap.data()?.data) {
-        applyingCloud = true;
-        window.ccApplyCloudData(snap.data().data);
-        applyingCloud = false;
-        syncLabel.textContent = "SYNC 완료";
-      } else {
-        await pushCloud(window.ccGetData());
-      }
+      let firstSnapshot = true;
+
+      unsubscribeLive = onSnapshot(
+        userDoc(user.uid),
+        async snap => {
+          try {
+            if (snap.exists() && snap.data()?.data) {
+              const incoming = snap.data().data;
+              const local = window.ccGetData();
+
+              // 동일한 데이터면 불필요한 전체 재렌더링을 피함.
+              if (JSON.stringify(incoming) !== JSON.stringify(local)) {
+                applyingCloud = true;
+                window.ccApplyCloudData(incoming);
+                applyingCloud = false;
+              }
+
+              syncLabel.textContent = "LIVE SYNC";
+            } else if (firstSnapshot) {
+              // 처음 로그인한 사용자는 현재 로컬 데이터를 최초 1회 업로드.
+              await pushCloud(window.ccGetData());
+            }
+          } catch (e) {
+            applyingCloud = false;
+            console.error(e);
+            syncLabel.textContent = "SYNC 오류";
+          } finally {
+            firstSnapshot = false;
+          }
+        },
+        err => {
+          console.error(err);
+          syncLabel.textContent = "SYNC 오류";
+          alert("실시간 동기화 연결에 실패했습니다.\nFirestore Rules와 Authorized domains를 확인해주세요.");
+        }
+      );
     } catch (e) {
       applyingCloud = false;
       console.error(e);
       syncLabel.textContent = "SYNC 오류";
-      alert("Firebase 데이터를 불러오지 못했습니다.\nFirestore Rules와 Authorized domains를 확인해주세요.");
     }
   });
+
 }
 </script>
 
